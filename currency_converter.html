@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Currency Converter</title>
+
+  <!-- PWA support -->
+  <link rel="manifest" href="manifest.json"/>
+  <meta name="theme-color" content="#0d0f1a"/>
+  <link rel="apple-touch-icon" href="icon-192.png"/>
+  <link rel="icon" type="image/png" href="icon-192.png"/>
+
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0f1a;
+      --card: #151826;
+      --border: #232640;
+      --accent: #6c63ff;
+      --accent2: #00e5b0;
+      --text: #f0f0ff;
+      --muted: #7e82a8;
+      --input-bg: #1b1e32;
+      --error: #ff6b6b;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 16px 60px;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+    header .eyebrow {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent2);
+      margin-bottom: 10px;
+    }
+    header h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(28px, 5vw, 46px);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      background: linear-gradient(120deg, #fff 30%, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    header p {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    /* Card */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px;
+      width: 100%;
+      max-width: 520px;
+    }
+
+    /* Rate strip */
+    .rate-strip {
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 28px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .rate-strip .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--accent2);
+      box-shadow: 0 0 6px var(--accent2);
+      flex-shrink: 0;
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    .rate-strip .dot.cached {
+      background: #ffb84d;
+      box-shadow: 0 0 6px #ffb84d;
+    }
+
+    /* Form */
+    .field { margin-bottom: 20px; }
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    input[type="number"], select {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 16px;
+      padding: 14px 16px;
+      outline: none;
+      transition: border-color 0.2s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    input[type="number"]:focus, select:focus {
+      border-color: var(--accent);
+    }
+    input[type="number"]::placeholder { color: var(--muted); }
+
+    /* Currency row */
+    .currency-row {
+      display: grid;
+      grid-template-columns: 1fr 44px 1fr;
+      gap: 12px;
+      align-items: end;
+      margin-bottom: 24px;
+    }
+    .swap-btn {
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--accent2);
+      font-size: 20px;
+      width: 44px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.2s;
+      margin-bottom: 0;
+      flex-shrink: 0;
+    }
+    .swap-btn:hover {
+      background: var(--border);
+      transform: rotate(180deg);
+    }
+
+    /* Convert button */
+    .convert-btn {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, var(--accent), #9b8ffd);
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .convert-btn:hover { opacity: 0.9; }
+    .convert-btn:active { transform: scale(0.98); }
+    .convert-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Result */
+    .result-box {
+      margin-top: 24px;
+      background: linear-gradient(135deg, #12203a, #1a1533);
+      border: 1px solid var(--accent);
+      border-radius: 14px;
+      padding: 24px;
+      text-align: center;
+      display: none;
+      position: relative;
+    }
+    .result-box.show { display: block; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .result-label { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+    .result-amount {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(28px, 7vw, 42px);
+      font-weight: 700;
+      color: var(--accent2);
+      letter-spacing: -0.02em;
+    }
+    .result-rate { margin-top: 10px; font-size: 13px; color: var(--muted); }
+
+    .copy-btn {
+      margin-top: 14px;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 12px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    .copy-btn:hover { background: var(--border); color: var(--accent2); }
+    .copy-btn.copied { color: var(--accent2); border-color: var(--accent2); }
+
+    /* History */
+    .history-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 32px 0 12px;
+    }
+    .history-list { display: flex; flex-direction: column; gap: 8px; }
+    .history-item {
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 13px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--text);
+    }
+    .history-item .hi-pair { color: var(--muted); font-size: 11px; margin-top: 2px; }
+    .history-item .hi-result { color: var(--accent2); font-family: 'Space Grotesk', sans-serif; font-weight: 600; }
+    .clear-btn {
+      background: none; border: none; color: var(--error);
+      font-size: 12px; cursor: pointer; margin-top: 10px;
+      text-decoration: underline; padding: 0;
+    }
+
+    /* Error */
+    .error-msg { color: var(--error); font-size: 13px; margin-top: 12px; display: none; }
+    .error-msg.show { display: block; }
+
+    /* Loader */
+    .loader {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block; vertical-align: middle; margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    footer { margin-top: 40px; font-size: 12px; color: var(--muted); text-align: center; }
+    footer span { color: var(--accent2); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">Live Exchange Rates</div>
+  <h1>Currency Converter</h1>
+  <p>Live exchange rates · 150+ currencies</p>
+</header>
+
+<div class="card">
+  <!-- Live rate indicator -->
+  <div class="rate-strip">
+    <span class="dot" id="rateDot"></span>
+    <span id="rateInfo">Rates powered by ExchangeRate-API</span>
+  </div>
+
+  <!-- Amount -->
+  <div class="field">
+    <label>Amount</label>
+    <input type="number" id="amount" placeholder="Enter amount" min="0" value="1" />
+  </div>
+
+  <!-- From / Swap / To -->
+  <div class="currency-row">
+    <div class="field" style="margin-bottom:0">
+      <label>From</label>
+      <select id="fromCurrency"></select>
+    </div>
+    <button class="swap-btn" onclick="swapCurrencies()" title="Swap currencies">⇄</button>
+    <div class="field" style="margin-bottom:0">
+      <label>To</label>
+      <select id="toCurrency"></select>
+    </div>
+  </div>
+
+  <button class="convert-btn" id="convertBtn" onclick="convert()">Convert</button>
+
+  <div class="error-msg" id="errorMsg">⚠ Could not fetch rates. Please check your internet connection.</div>
+
+  <!-- Result -->
+  <div class="result-box" id="resultBox">
+    <div class="result-label">Converted Amount</div>
+    <div class="result-amount" id="resultAmount">—</div>
+    <div class="result-rate" id="resultRate"></div>
+    <button class="copy-btn" id="copyBtn" onclick="copyResult()">📋 Copy result</button>
+  </div>
+
+  <!-- History -->
+  <div id="historySection" style="display:none">
+    <div class="history-title">Recent Conversions</div>
+    <div class="history-list" id="historyList"></div>
+    <button class="clear-btn" onclick="clearHistory()">Clear history</button>
+  </div>
+</div>
+
+<footer>Built with ❤ by Narendra · Rates by <span>ExchangeRate-API</span></footer>
+
+<script>
+  /* =========================================================
+     CONFIG
+  ========================================================= */
+  const API_BASE = 'https://api.exchangerate-api.com/v4/latest/';
+  const CACHE_KEY = 'cc_rate_cache';
+  const HISTORY_KEY = 'cc_history';
+  const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+  const MAX_HISTORY = 5;
+
+  // code -> [country name, ISO2 country code for flag]
+  const CURRENCIES = {
+    USD: ["United States", "US"], EUR: ["European Union", "EU"], GBP: ["United Kingdom", "GB"],
+    INR: ["India", "IN"], JPY: ["Japan", "JP"], AUD: ["Australia", "AU"], CAD: ["Canada", "CA"],
+    CHF: ["Switzerland", "CH"], CNY: ["China", "CN"], SGD: ["Singapore", "SG"], HKD: ["Hong Kong", "HK"],
+    NZD: ["New Zealand", "NZ"], SEK: ["Sweden", "SE"], NOK: ["Norway", "NO"], DKK: ["Denmark", "DK"],
+    MXN: ["Mexico", "MX"], BRL: ["Brazil", "BR"], ZAR: ["South Africa", "ZA"], RUB: ["Russia", "RU"],
+    AED: ["UAE", "AE"], SAR: ["Saudi Arabia", "SA"], TRY: ["Turkey", "TR"], KRW: ["South Korea", "KR"],
+    THB: ["Thailand", "TH"], IDR: ["Indonesia", "ID"], MYR: ["Malaysia", "MY"], PHP: ["Philippines", "PH"],
+    PKR: ["Pakistan", "PK"], BDT: ["Bangladesh", "BD"], EGP: ["Egypt", "EG"], NGN: ["Nigeria", "NG"],
+    KES: ["Kenya", "KE"], GHS: ["Ghana", "GH"], UGX: ["Uganda", "UG"], TZS: ["Tanzania", "TZ"],
+    MAD: ["Morocco", "MA"], DZD: ["Algeria", "DZ"], IQD: ["Iraq", "IQ"], QAR: ["Qatar", "QA"],
+    KWD: ["Kuwait", "KW"], BHD: ["Bahrain", "BH"], OMR: ["Oman", "OM"], JOD: ["Jordan", "JO"],
+    LBP: ["Lebanon", "LB"], ILS: ["Israel", "IL"], UAH: ["Ukraine", "UA"], PLN: ["Poland", "PL"],
+    CZK: ["Czech Republic", "CZ"], HUF: ["Hungary", "HU"], RON: ["Romania", "RO"],
+  };
+
+  /* =========================================================
+     DOM REFS
+  ========================================================= */
+  const fromSel   = document.getElementById('fromCurrency');
+  const toSel     = document.getElementById('toCurrency');
+  const rateDot   = document.getElementById('rateDot');
+  const rateInfo  = document.getElementById('rateInfo');
+
+  let history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+
+  /* =========================================================
+     HELPERS: flags + formatting
+  ========================================================= */
+  function flagEmoji(iso2) {
+    return iso2
+      .toUpperCase()
+      .replace(/./g, ch => String.fromCodePoint(127397 + ch.charCodeAt(0)));
+  }
+
+  // Large numbers -> 2 decimals, small numbers -> up to 6 (avoids "0.00" for tiny rates)
+  function formatAmount(num) {
+    const n = parseFloat(num);
+    const maxDigits = Math.abs(n) >= 1 ? 2 : 6;
+    return n.toLocaleString(undefined, { maximumFractionDigits: maxDigits });
+  }
+
+  function formatTime(ts) {
+    return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+
+  /* =========================================================
+     HELPERS: rate cache (per base currency, 5 min TTL)
+  ========================================================= */
+  function getCachedRates(base) {
+    const cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+    const entry = cache[base];
+    if (entry && (Date.now() - entry.timestamp < CACHE_TTL_MS)) return entry;
+    return null;
+  }
+
+  function setCachedRates(base, rates) {
+    const cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+    cache[base] = { rates, timestamp: Date.now() };
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+  }
+
+  /* =========================================================
+     INIT: populate dropdowns with flag + code + country
+  ========================================================= */
+  function populateDropdowns() {
+    const options = Object.entries(CURRENCIES).map(([code, [country, iso2]]) =>
+      `<option value="${code}">${flagEmoji(iso2)} ${code} — ${country}</option>`
+    ).join('');
+
+    fromSel.innerHTML = options;
+    toSel.innerHTML   = options;
+    fromSel.value = 'USD';
+    toSel.value   = 'INR';
+  }
+  populateDropdowns();
+  renderHistory();
+
+  /* =========================================================
+     CORE ACTIONS
+  ========================================================= */
+  function swapCurrencies() {
+    [fromSel.value, toSel.value] = [toSel.value, fromSel.value];
+  }
+
+  async function convert() {
+    const btn    = document.getElementById('convertBtn');
+    const errEl  = document.getElementById('errorMsg');
+    const resBox = document.getElementById('resultBox');
+    const amount = parseFloat(document.getElementById('amount').value);
+
+    errEl.classList.remove('show');
+    resBox.classList.remove('show');
+
+    if (!amount || amount <= 0) {
+      errEl.textContent = '⚠ Please enter a valid positive amount.';
+      errEl.classList.add('show');
+      return;
+    }
+
+    const from = fromSel.value;
+    const to   = toSel.value;
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loader"></span>Converting…';
+
+    try {
+      let rates, timestamp, fromCache;
+
+      const cached = getCachedRates(from);
+      if (cached) {
+        rates = cached.rates;
+        timestamp = cached.timestamp;
+        fromCache = true;
+      } else {
+        const res = await fetch(API_BASE + from);
+        if (!res.ok) throw new Error('API error');
+        const data = await res.json();
+        rates = data.rates;
+        timestamp = Date.now();
+        fromCache = false;
+        setCachedRates(from, rates);
+      }
+
+      const rate = rates[to];
+      if (!rate) throw new Error('Currency not found');
+
+      const converted = amount * rate;
+
+      document.getElementById('resultAmount').textContent = `${formatAmount(converted)} ${to}`;
+      document.getElementById('resultRate').textContent = `1 ${from} = ${rate.toFixed(6)} ${to}`;
+      resBox.classList.add('show');
+
+      rateDot.classList.toggle('cached', fromCache);
+      rateInfo.textContent = fromCache
+        ? `Showing cached rates from ${formatTime(timestamp)}`
+        : `Rates updated at ${formatTime(timestamp)}`;
+
+      // Save to history
+      history.unshift({ from, to, amount, converted: converted.toFixed(4), rate: rate.toFixed(4) });
+      if (history.length > MAX_HISTORY) history = history.slice(0, MAX_HISTORY);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+      renderHistory();
+
+    } catch (e) {
+      errEl.textContent = '⚠ Could not fetch rates. Check your internet connection.';
+      errEl.classList.add('show');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Convert';
+    }
+  }
+
+  function copyResult() {
+    const text = document.getElementById('resultAmount').textContent;
+    const btn  = document.getElementById('copyBtn');
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = '✅ Copied';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = '📋 Copy result';
+        btn.classList.remove('copied');
+      }, 1500);
+    });
+  }
+
+  /* =========================================================
+     HISTORY RENDERING
+  ========================================================= */
+  function renderHistory() {
+    const sec  = document.getElementById('historySection');
+    const list = document.getElementById('historyList');
+    if (!history.length) { sec.style.display = 'none'; return; }
+    sec.style.display = 'block';
+    list.innerHTML = history.map(h => `
+      <div class="history-item">
+        <div>
+          <div>${formatAmount(h.amount)} ${h.from}</div>
+          <div class="hi-pair">${h.from} → ${h.to}</div>
+        </div>
+        <div class="hi-result">${formatAmount(h.converted)} ${h.to}</div>
+      </div>`).join('');
+  }
+
+  function clearHistory() {
+    history = [];
+    localStorage.removeItem(HISTORY_KEY);
+    renderHistory();
+  }
+
+  // Allow Enter key inside amount field
+  document.getElementById('amount').addEventListener('keydown', e => {
+    if (e.key === 'Enter') convert();
+  });
+
+  /* =========================================================
+     PWA: register service worker for offline/installable support
+  ========================================================= */
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('service-worker.js')
+        .catch(err => console.log('Service worker registration failed:', err));
+    });
+  }
+</script>
+</body>
+</html>
